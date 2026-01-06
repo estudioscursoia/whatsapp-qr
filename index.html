@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escanear QR WhatsApp</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 400px;
+        }
+        h2 {
+            color: #128C7E;
+            margin-bottom: 20px;
+        }
+        #qr-container {
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        #qr-code {
+            width: 280px;
+            height: 280px;
+            display: block;
+            margin: 0 auto;
+        }
+        #status {
+            color: #666;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+        .loading {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #25D366;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📱 Conectar WhatsApp</h2>
+        <p>Escanea el código QR con tu WhatsApp</p>
+        
+        <div id="qr-container">
+            <div class="loading"></div>
+            <img id="qr-code" style="display:none;" alt="QR Code">
+            <p id="status">Cargando código QR...</p>
+        </div>
+        
+        <p style="font-size: 12px; color: #999;">
+            El código se actualiza automáticamente cada 20 segundos
+        </p>
+    </div>
+
+    <script>
+        const API_URL = 'https://evolution-api-updated-production-f838.up.railway.app';
+        const INSTANCE_NAME = 'ChatBoot';
+        const API_KEY = 'DC9477A001A6-4FF9-91EB-AE324C58C1E6';
+
+        async function obtenerQR() {
+            try {
+                // Usar el mismo formato que usa Evolution Manager
+                const response = await fetch(`${API_URL}/instance/connect/${INSTANCE_NAME}`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': API_KEY
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.code) {
+                    // El QR viene en formato base64 en el campo "code"
+                    document.querySelector('.loading').style.display = 'none';
+                    document.getElementById('qr-code').style.display = 'block';
+                    document.getElementById('qr-code').src = data.base64 || `data:image/png;base64,${data.code}`;
+                    document.getElementById('status').textContent = '✅ Escanea con WhatsApp > Dispositivos vinculados';
+                    document.getElementById('status').classList.remove('error');
+                } else if (data.instance?.state === 'open') {
+                    document.getElementById('status').textContent = '✅ WhatsApp ya está conectado';
+                    document.querySelector('.loading').style.display = 'none';
+                } else {
+                    document.querySelector('.loading').style.display = 'none';
+                    document.getElementById('status').textContent = '⏳ Esperando QR...';
+                    document.getElementById('status').classList.add('error');
+                }
+            } catch (error) {
+                document.getElementById('status').textContent = '❌ Error al cargar QR. Verifica la configuración.';
+                document.getElementById('status').classList.add('error');
+                document.querySelector('.loading').style.display = 'none';
+                console.error('Error:', error);
+            }
+        }
+
+        // Cargar QR inmediatamente y actualizar cada 20 segundos
+        obtenerQR();
+        setInterval(obtenerQR, 20000);
+    </script>
+</body>
+</html>
